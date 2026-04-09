@@ -1,168 +1,177 @@
-// NEXT.JS 14 APP (single-file demo page)
-// create-next-app -> replace app/page.jsx with this
+// =========================
+// GITHUB-READY NEXT.JS APP
+// =========================
+// Структура проекта:
+// case-site/
+// ├─ app/
+// │  ├─ page.jsx
+// │  ├─ layout.jsx
+// │  └─ api/
+// │     ├─ skins/route.js
+// │     └─ auth/steam/route.js (mock)
+// ├─ lib/
+// │  └─ random.js
+// ├─ package.json
+// └─ next.config.js
 
+// =========================
+// package.json
+// =========================
+{
+  "name": "case-site",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start"
+  },
+  "dependencies": {
+    "next": "14.2.0",
+    "react": "18.2.0",
+    "react-dom": "18.2.0"
+  }
+}
+
+// =========================
+// next.config.js
+// =========================
+module.exports = { reactStrictMode: true };
+
+// =========================
+// app/layout.jsx
+// =========================
+export default function RootLayout({ children }) {
+  return (
+    <html lang="ru">
+      <body style={{ margin: 0 }}>{children}</body>
+    </html>
+  );
+}
+
+// =========================
+// lib/random.js (шансы как в CS)
+// =========================
+export function weightedRandom(items) {
+  const total = items.reduce((s, i) => s + i.chance, 0);
+  let r = Math.random() * total;
+  for (let item of items) {
+    if (r < item.chance) return item;
+    r -= item.chance;
+  }
+}
+
+// =========================
+// app/api/skins/route.js
+// =========================
+export async function GET() {
+  return Response.json([
+    { name: "AK-47 | Redline", price: 12, rarity: "blue", chance: 40 },
+    { name: "USP-S | Kill Confirmed", price: 20, rarity: "purple", chance: 25 },
+    { name: "M4A4 | Neon Rider", price: 30, rarity: "pink", chance: 20 },
+    { name: "AWP | Asiimov", price: 45, rarity: "red", chance: 10 },
+    { name: "Glock-18 | Fade", price: 80, rarity: "gold", chance: 5 }
+  ]);
+}
+
+// =========================
+// app/api/auth/steam/route.js (заглушка)
+// =========================
+export async function GET() {
+  return Response.json({ user: "SteamUser123" });
+}
+
+// =========================
+// app/page.jsx (ОСНОВНОЙ UI)
+// =========================
 "use client";
-import { useState } from "react";
+import { useEffect, useState, useRef } from "react";
+import { weightedRandom } from "../lib/random";
 
-const skins = [
-  { name: "AK-47 | Redline", price: 12 },
-  { name: "AWP | Asiimov", price: 45 },
-  { name: "M4A4 | Neon Rider", price: 30 },
-  { name: "Glock-18 | Fade", price: 25 },
-  { name: "USP-S | Kill Confirmed", price: 20 },
-];
-
-export default function Home() {
+export default function Page() {
+  const [skins, setSkins] = useState([]);
   const [balance, setBalance] = useState(100);
+  const [inventory, setInventory] = useState([]);
   const [rolling, setRolling] = useState(false);
-  const [result, setResult] = useState(null);
+  const [winner, setWinner] = useState(null);
+  const stripRef = useRef();
 
-  const deposit = () => {
-    setBalance(balance + 50);
-  };
+  useEffect(() => {
+    fetch("/api/skins").then(r => r.json()).then(setSkins);
+  }, []);
+
+  const deposit = () => setBalance(b => b + 50);
 
   const openCase = () => {
-    if (balance < 10) return alert("Недостаточно средств");
-
-    setBalance(balance - 10);
+    if (balance < 10 || rolling) return;
+    setBalance(b => b - 10);
     setRolling(true);
 
+    const win = weightedRandom(skins);
+    setWinner(win);
+
+    const strip = stripRef.current;
+    strip.style.transition = "none";
+    strip.style.transform = "translateX(0px)";
+
     setTimeout(() => {
-      const win = skins[Math.floor(Math.random() * skins.length)];
-      setResult(win);
+      strip.style.transition = "transform 3s cubic-bezier(.2,.8,.2,1)";
+      strip.style.transform = `translateX(-${Math.random()*2000+1000}px)`;
+    }, 50);
+
+    setTimeout(() => {
+      setInventory(inv => [...inv, win]);
       setRolling(false);
-    }, 2000);
+    }, 3200);
   };
 
   return (
     <div style={styles.page}>
       <header style={styles.header}>
-        <div style={styles.logo}>jabka</div>
+        <div style={styles.logo}>Jabka Clone</div>
         <div>
-          💰 Баланс: {balance}$
-          <button style={styles.btn} onClick={deposit}>Пополнить</button>
+          💰 {balance}$
+          <button onClick={deposit} style={styles.btn}>Пополнить</button>
         </div>
       </header>
 
-      <section style={styles.banner}>
-        <div style={styles.card}>Бесплатный кейс</div>
-        <div style={styles.card}>Промокод +13%</div>
-        <div style={styles.card}>VIP CLUB</div>
-      </section>
-
-      <section style={{ textAlign: "center" }}>
-        <h2>Открытие кейса ($10)</h2>
-        <button style={styles.openBtn} onClick={openCase} disabled={rolling}>
-          {rolling ? "Открывается..." : "Открыть кейс"}
-        </button>
-
-        <div style={styles.roulette}>
-          {rolling ? (
-            <div style={styles.rollAnim} />
-          ) : result ? (
-            <div>
-              🎉 Вы выбили: <b>{result.name}</b> (${result.price})
-            </div>
-          ) : null}
-        </div>
-      </section>
-
-      <section style={styles.cases}>
-        <h2>Возможные дропы</h2>
-        <div style={styles.grid}>
-          {skins.map((s, i) => (
-            <div key={i} style={styles.caseItem}>
-              <div style={styles.img}></div>
+      <div style={styles.rouletteBox}>
+        <div ref={stripRef} style={styles.strip}>
+          {skins.concat(skins).concat(skins).map((s, i) => (
+            <div key={i} style={{...styles.item, borderColor: color(s.rarity)}}>
               {s.name}
-              <br />${s.price}
             </div>
           ))}
         </div>
-      </section>
+      </div>
+
+      <div style={{ textAlign: "center" }}>
+        <button onClick={openCase} style={styles.openBtn}>
+          {rolling ? "Крутится..." : "Открыть кейс (10$)"}
+        </button>
+      </div>
+
+      <h3 style={{ padding: 20 }}>🎒 Инвентарь</h3>
+      <div style={styles.grid}>
+        {inventory.map((i, idx) => (
+          <div key={idx} style={{...styles.invItem, borderColor: color(i.rarity)}}>
+            {i.name}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }
 
+function color(r) {
+  return {
+    blue: "#4aa3ff",
+    purple: "#a855f7",
+    pink: "#ec4899",
+    red: "#ef4444",
+    gold: "#facc15"
+  }[r];
+}
+
 const styles = {
-  page: {
-    background: "#0c1b13",
-    minHeight: "100vh",
-    color: "white",
-    fontFamily: "Arial",
-  },
-  header: {
-    display: "flex",
-    justifyContent: "space-between",
-    padding: 20,
-    background: "#0f2a1d",
-  },
-  logo: {
-    color: "#7CFF7C",
-    fontSize: 24,
-  },
-  btn: {
-    marginLeft: 10,
-    padding: "5px 10px",
-    background: "#7CFF7C",
-    border: "none",
-    borderRadius: 5,
-  },
-  banner: {
-    display: "flex",
-    gap: 10,
-    padding: 20,
-  },
-  card: {
-    flex: 1,
-    background: "#1e3c2f",
-    padding: 20,
-    borderRadius: 10,
-    textAlign: "center",
-  },
-  openBtn: {
-    padding: "10px 20px",
-    background: "#7CFF7C",
-    border: "none",
-    borderRadius: 10,
-    fontSize: 16,
-  },
-  roulette: {
-    marginTop: 20,
-    height: 80,
-  },
-  rollAnim: {
-    width: "100%",
-    height: 50,
-    background: "linear-gradient(90deg, #333, #7CFF7C, #333)",
-    animation: "roll 0.3s infinite",
-  },
-  cases: {
-    padding: 20,
-  },
-  grid: {
-    display: "grid",
-    gridTemplateColumns: "repeat(auto-fill, minmax(150px,1fr))",
-    gap: 10,
-  },
-  caseItem: {
-    background: "#13291d",
-    padding: 10,
-    borderRadius: 10,
-    textAlign: "center",
-  },
-  img: {
-    height: 80,
-    background: "#333",
-    marginBottom: 10,
-  },
-};
-
-// MOCK API (создай /app/api/skins/route.js)
-// export async function GET() {
-//   return Response.json(skins);
-// }
-
-// УСТАНОВКА:
-// npx create-next-app@latest case-site
-// заменить app/page.jsx этим кодом
-// npm run dev
+  page: { background: "#0c1b13", minHeight: "100vh", color: "white" },
+  header: { display: "flex", justifyContent: "space-between", padding: 20, background: "#
