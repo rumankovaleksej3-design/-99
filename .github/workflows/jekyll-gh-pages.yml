@@ -1,51 +1,168 @@
-# Sample workflow for building and deploying a Jekyll site to GitHub Pages
-name: Deploy Jekyll with GitHub Pages dependencies preinstalled
+// NEXT.JS 14 APP (single-file demo page)
+// create-next-app -> replace app/page.jsx with this
 
-on:
-  # Runs on pushes targeting the default branch
-  push:
-    branches: ["main"]
+"use client";
+import { useState } from "react";
 
-  # Allows you to run this workflow manually from the Actions tab
-  workflow_dispatch:
+const skins = [
+  { name: "AK-47 | Redline", price: 12 },
+  { name: "AWP | Asiimov", price: 45 },
+  { name: "M4A4 | Neon Rider", price: 30 },
+  { name: "Glock-18 | Fade", price: 25 },
+  { name: "USP-S | Kill Confirmed", price: 20 },
+];
 
-# Sets permissions of the GITHUB_TOKEN to allow deployment to GitHub Pages
-permissions:
-  contents: read
-  pages: write
-  id-token: write
+export default function Home() {
+  const [balance, setBalance] = useState(100);
+  const [rolling, setRolling] = useState(false);
+  const [result, setResult] = useState(null);
 
-# Allow only one concurrent deployment, skipping runs queued between the run in-progress and latest queued.
-# However, do NOT cancel in-progress runs as we want to allow these production deployments to complete.
-concurrency:
-  group: "pages"
-  cancel-in-progress: false
+  const deposit = () => {
+    setBalance(balance + 50);
+  };
 
-jobs:
-  # Build job
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v4
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
-      - name: Build with Jekyll
-        uses: actions/jekyll-build-pages@v1
-        with:
-          source: ./
-          destination: ./_site
-      - name: Upload artifact
-        uses: actions/upload-pages-artifact@v3
+  const openCase = () => {
+    if (balance < 10) return alert("Недостаточно средств");
 
-  # Deployment job
-  deploy:
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-    runs-on: ubuntu-latest
-    needs: build
-    steps:
-      - name: Deploy to GitHub Pages
-        id: deployment
-        uses: actions/deploy-pages@v5
+    setBalance(balance - 10);
+    setRolling(true);
+
+    setTimeout(() => {
+      const win = skins[Math.floor(Math.random() * skins.length)];
+      setResult(win);
+      setRolling(false);
+    }, 2000);
+  };
+
+  return (
+    <div style={styles.page}>
+      <header style={styles.header}>
+        <div style={styles.logo}>jabka</div>
+        <div>
+          💰 Баланс: {balance}$
+          <button style={styles.btn} onClick={deposit}>Пополнить</button>
+        </div>
+      </header>
+
+      <section style={styles.banner}>
+        <div style={styles.card}>Бесплатный кейс</div>
+        <div style={styles.card}>Промокод +13%</div>
+        <div style={styles.card}>VIP CLUB</div>
+      </section>
+
+      <section style={{ textAlign: "center" }}>
+        <h2>Открытие кейса ($10)</h2>
+        <button style={styles.openBtn} onClick={openCase} disabled={rolling}>
+          {rolling ? "Открывается..." : "Открыть кейс"}
+        </button>
+
+        <div style={styles.roulette}>
+          {rolling ? (
+            <div style={styles.rollAnim} />
+          ) : result ? (
+            <div>
+              🎉 Вы выбили: <b>{result.name}</b> (${result.price})
+            </div>
+          ) : null}
+        </div>
+      </section>
+
+      <section style={styles.cases}>
+        <h2>Возможные дропы</h2>
+        <div style={styles.grid}>
+          {skins.map((s, i) => (
+            <div key={i} style={styles.caseItem}>
+              <div style={styles.img}></div>
+              {s.name}
+              <br />${s.price}
+            </div>
+          ))}
+        </div>
+      </section>
+    </div>
+  );
+}
+
+const styles = {
+  page: {
+    background: "#0c1b13",
+    minHeight: "100vh",
+    color: "white",
+    fontFamily: "Arial",
+  },
+  header: {
+    display: "flex",
+    justifyContent: "space-between",
+    padding: 20,
+    background: "#0f2a1d",
+  },
+  logo: {
+    color: "#7CFF7C",
+    fontSize: 24,
+  },
+  btn: {
+    marginLeft: 10,
+    padding: "5px 10px",
+    background: "#7CFF7C",
+    border: "none",
+    borderRadius: 5,
+  },
+  banner: {
+    display: "flex",
+    gap: 10,
+    padding: 20,
+  },
+  card: {
+    flex: 1,
+    background: "#1e3c2f",
+    padding: 20,
+    borderRadius: 10,
+    textAlign: "center",
+  },
+  openBtn: {
+    padding: "10px 20px",
+    background: "#7CFF7C",
+    border: "none",
+    borderRadius: 10,
+    fontSize: 16,
+  },
+  roulette: {
+    marginTop: 20,
+    height: 80,
+  },
+  rollAnim: {
+    width: "100%",
+    height: 50,
+    background: "linear-gradient(90deg, #333, #7CFF7C, #333)",
+    animation: "roll 0.3s infinite",
+  },
+  cases: {
+    padding: 20,
+  },
+  grid: {
+    display: "grid",
+    gridTemplateColumns: "repeat(auto-fill, minmax(150px,1fr))",
+    gap: 10,
+  },
+  caseItem: {
+    background: "#13291d",
+    padding: 10,
+    borderRadius: 10,
+    textAlign: "center",
+  },
+  img: {
+    height: 80,
+    background: "#333",
+    marginBottom: 10,
+  },
+};
+
+// MOCK API (создай /app/api/skins/route.js)
+// export async function GET() {
+//   return Response.json(skins);
+// }
+
+// УСТАНОВКА:
+// npx create-next-app@latest case-site
+// заменить app/page.jsx этим кодом
+// npm run dev
